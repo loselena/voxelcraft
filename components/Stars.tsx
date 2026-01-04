@@ -3,7 +3,7 @@ import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 
 interface StarsProps {
-  intensity: number; // 0..1
+  intensity: number;
 }
 
 const StarShader = {
@@ -25,14 +25,11 @@ const StarShader = {
       vColor = color;
       vPhase = phase;
       vMag = magnitude;
-      
       vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-      
       float twinkle = 1.0;
       if (vMag > 0.8) { 
          twinkle = 0.9 + 0.1 * sin(uTime * 1.2 + vPhase);
       }
-      
       gl_PointSize = size * twinkle * (800.0 / -mvPosition.z);
       gl_Position = projectionMatrix * mvPosition;
     }
@@ -45,11 +42,8 @@ const StarShader = {
     void main() {
       float dist = distance(gl_PointCoord, vec2(0.5));
       if (dist > 0.5) discard;
-      
       float alpha = smoothstep(0.5, 0.1, dist) * uOpacity;
-      
       if (vMag < 0.3) alpha *= 0.5;
-
       gl_FragColor = vec4(vColor, alpha);
     }
   `
