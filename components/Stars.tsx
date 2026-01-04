@@ -35,7 +35,7 @@ const StarShader = {
          twinkle = 0.9 + 0.1 * sin(uTime * 1.2 + vPhase);
       }
       
-      // Уменьшенный размер точек (не более 2.5 на стандартном разрешении)
+      // Уменьшенный размер точек
       gl_PointSize = size * twinkle * (800.0 / -mvPosition.z);
       gl_Position = projectionMatrix * mvPosition;
     }
@@ -49,10 +49,9 @@ const StarShader = {
       float dist = distance(gl_PointCoord, vec2(0.5));
       if (dist > 0.5) discard;
       
-      // Мягкие края, но очень маленькое ядро
+      // Мягкие края
       float alpha = smoothstep(0.5, 0.1, dist) * uOpacity;
       
-      // Для тусклых звезд (пыли) уменьшаем прозрачность еще сильнее
       if (vMag < 0.3) alpha *= 0.5;
 
       gl_FragColor = vec4(vColor, alpha);
@@ -72,12 +71,11 @@ const Stars: React.FC<StarsProps> = ({ intensity }) => {
     const ph = new Float32Array(count);
     const mag = new Float32Array(count);
 
-    // Физически достоверные цвета (почти белые)
     const starColors = [
-      new THREE.Color('#f0f5ff'), // Бледно-голубой
-      new THREE.Color('#ffffff'), // Чисто белый
-      new THREE.Color('#fffdf5'), // Теплый белый
-      new THREE.Color('#fff4e0'), // Очень бледный оранжевый (редко)
+      new THREE.Color('#f0f5ff'),
+      new THREE.Color('#ffffff'),
+      new THREE.Color('#fffdf5'),
+      new THREE.Color('#fff4e0'),
     ];
 
     for (let i = 0; i < count; i++) {
@@ -85,7 +83,6 @@ const Stars: React.FC<StarsProps> = ({ intensity }) => {
       let theta = Math.random() * Math.PI * 2;
       let phi = Math.acos(2 * Math.random() - 1);
 
-      // Структура Млечного Пути (полоса)
       const isMilkyWay = Math.random() > 0.5;
       if (isMilkyWay) {
         const deviation = (Math.random() - 0.5) * 0.35;
@@ -108,9 +105,9 @@ const Stars: React.FC<StarsProps> = ({ intensity }) => {
       col[i * 3 + 1] = color.g;
       col[i * 3 + 2] = color.b;
 
-      const magnitude = Math.pow(Math.random(), 5); // Еще больше смещения к тусклым
+      const magnitude = Math.pow(Math.random(), 5);
       mag[i] = magnitude;
-      sz[i] = 0.8 + magnitude * 1.5; // Максимально мелкие точки
+      sz[i] = 0.8 + magnitude * 1.5;
       ph[i] = Math.random() * 100;
     }
     return [pos, col, sz, ph, mag];
@@ -129,11 +126,11 @@ const Stars: React.FC<StarsProps> = ({ intensity }) => {
   return (
     <points ref={pointsRef}>
       <bufferGeometry>
-        <bufferAttribute attach="attributes-position" count={count} array={positions} itemSize={3} />
-        <bufferAttribute attach="attributes-color" count={count} array={colors} itemSize={3} />
-        <bufferAttribute attach="attributes-size" count={count} array={sizes} itemSize={1} />
-        <bufferAttribute attach="attributes-phase" count={count} array={phases} itemSize={1} />
-        <bufferAttribute attach="attributes-magnitude" count={count} array={magnitudes} itemSize={1} />
+        <bufferAttribute attach="attributes-position" args={[positions, 3]} />
+        <bufferAttribute attach="attributes-color" args={[colors, 3]} />
+        <bufferAttribute attach="attributes-size" args={[sizes, 1]} />
+        <bufferAttribute attach="attributes-phase" args={[phases, 1]} />
+        <bufferAttribute attach="attributes-magnitude" args={[magnitudes, 1]} />
       </bufferGeometry>
       <shaderMaterial
         ref={materialRef}
