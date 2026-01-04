@@ -28,13 +28,11 @@ const StarShader = {
       
       vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
       
-      // Легкое мерцание: только для ярких звезд, низкая частота
       float twinkle = 1.0;
       if (vMag > 0.8) { 
          twinkle = 0.9 + 0.1 * sin(uTime * 1.2 + vPhase);
       }
       
-      // Уменьшенный размер точек
       gl_PointSize = size * twinkle * (800.0 / -mvPosition.z);
       gl_Position = projectionMatrix * mvPosition;
     }
@@ -48,7 +46,6 @@ const StarShader = {
       float dist = distance(gl_PointCoord, vec2(0.5));
       if (dist > 0.5) discard;
       
-      // Мягкие края
       float alpha = smoothstep(0.5, 0.1, dist) * uOpacity;
       
       if (vMag < 0.3) alpha *= 0.5;
@@ -63,7 +60,8 @@ const Stars: React.FC<StarsProps> = ({ intensity }) => {
   const pointsRef = useRef<THREE.Points>(null);
   const materialRef = useRef<THREE.ShaderMaterial>(null);
 
-  const [positions, colors, sizes, phases, magnitudes] = useMemo(() => {
+  const geometry = useMemo(() => {
+    const geo = new THREE.BufferGeometry();
     const pos = new Float32Array(count * 3);
     const col = new Float32Array(count * 3);
     const sz = new Float32Array(count);
@@ -74,7 +72,6 @@ const Stars: React.FC<StarsProps> = ({ intensity }) => {
       new THREE.Color('#f0f5ff'),
       new THREE.Color('#ffffff'),
       new THREE.Color('#fffdf5'),
-      new THREE.Color('#fff4e0'),
     ];
 
     for (let i = 0; i < count; i++) {
@@ -101,18 +98,15 @@ const Stars: React.FC<StarsProps> = ({ intensity }) => {
       sz[i] = 0.8 + magnitude * 1.5;
       ph[i] = Math.random() * 100;
     }
-    return [pos, col, sz, ph, mag];
-  }, []);
 
-  const geometry = useMemo(() => {
-    const geo = new THREE.BufferGeometry();
-    geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-    geo.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
-    geo.setAttribute('phase', new THREE.BufferAttribute(phases, 1));
-    geo.setAttribute('magnitude', new THREE.BufferAttribute(magnitudes, 1));
+    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+    geo.setAttribute('size', new THREE.BufferAttribute(sz, 1));
+    geo.setAttribute('phase', new THREE.BufferAttribute(ph, 1));
+    geo.setAttribute('magnitude', new THREE.BufferAttribute(mag, 1));
+    
     return geo;
-  }, [positions, colors, sizes, phases, magnitudes]);
+  }, []);
 
   useFrame((state) => {
     if (materialRef.current) {
@@ -120,12 +114,12 @@ const Stars: React.FC<StarsProps> = ({ intensity }) => {
       materialRef.current.uniforms.uOpacity.value = intensity;
     }
     if (pointsRef.current) {
-      pointsRef.current.rotation.y = state.clock.elapsedTime * 0.001;
+      pointsRef.current.rotation.y = state.clock.elapsedTime * 0.0005;
     }
   });
 
   return (
-    <points ref={pointsRef} geometry={geometry}>
+    <primitive object={new THREE.Points(geometry)}>
       <shaderMaterial
         ref={materialRef}
         transparent
@@ -135,7 +129,7 @@ const Stars: React.FC<StarsProps> = ({ intensity }) => {
         fragmentShader={StarShader.fragmentShader}
         uniforms={StarShader.uniforms}
       />
-    </points>
+    </primitive>
   );
 };
 
