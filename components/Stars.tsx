@@ -1,4 +1,3 @@
-
 import React, { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
@@ -80,26 +79,18 @@ const Stars: React.FC<StarsProps> = ({ intensity }) => {
 
     for (let i = 0; i < count; i++) {
       const r = 950;
-      let theta = Math.random() * Math.PI * 2;
-      let phi = Math.acos(2 * Math.random() - 1);
-
-      const isMilkyWay = Math.random() > 0.5;
-      if (isMilkyWay) {
-        const deviation = (Math.random() - 0.5) * 0.35;
-        phi = Math.PI / 2 + deviation;
-        theta += Math.sin(phi * 4.0) * 0.2;
-      }
+      const theta = Math.random() * Math.PI * 2;
+      const phi = Math.acos(2 * Math.random() - 1);
 
       pos[i * 3] = r * Math.sin(phi) * Math.cos(theta);
       pos[i * 3 + 1] = r * Math.cos(phi);
       pos[i * 3 + 2] = r * Math.sin(phi) * Math.sin(theta);
 
       const cRand = Math.random();
-      let color;
+      let color = starColors[1];
       if (cRand < 0.1) color = starColors[0];
-      else if (cRand < 0.7) color = starColors[1];
-      else if (cRand < 0.95) color = starColors[2];
-      else color = starColors[3];
+      else if (cRand < 0.9) color = starColors[1];
+      else color = starColors[2];
 
       col[i * 3] = color.r;
       col[i * 3 + 1] = color.g;
@@ -113,6 +104,16 @@ const Stars: React.FC<StarsProps> = ({ intensity }) => {
     return [pos, col, sz, ph, mag];
   }, []);
 
+  const geometry = useMemo(() => {
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    geo.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+    geo.setAttribute('phase', new THREE.BufferAttribute(phases, 1));
+    geo.setAttribute('magnitude', new THREE.BufferAttribute(magnitudes, 1));
+    return geo;
+  }, [positions, colors, sizes, phases, magnitudes]);
+
   useFrame((state) => {
     if (materialRef.current) {
       materialRef.current.uniforms.uTime.value = state.clock.elapsedTime;
@@ -124,14 +125,7 @@ const Stars: React.FC<StarsProps> = ({ intensity }) => {
   });
 
   return (
-    <points ref={pointsRef}>
-      <bufferGeometry>
-        <bufferAttribute attach="attributes-position" args={[positions, 3]} />
-        <bufferAttribute attach="attributes-color" args={[colors, 3]} />
-        <bufferAttribute attach="attributes-size" args={[sizes, 1]} />
-        <bufferAttribute attach="attributes-phase" args={[phases, 1]} />
-        <bufferAttribute attach="attributes-magnitude" args={[magnitudes, 1]} />
-      </bufferGeometry>
+    <points ref={pointsRef} geometry={geometry}>
       <shaderMaterial
         ref={materialRef}
         transparent
