@@ -1,5 +1,5 @@
 
-/* WORLD WORKER - High-performance Voxel Meshing */
+/* WORLD WORKER - High-performance Voxel Meshing with AO */
 
 const CHUNK_SIZE = 16;
 const CHUNK_HEIGHT = 128;
@@ -18,7 +18,7 @@ const FACE_CONFIG = [
   { dir: [1, 0, 0], name: 'side', corners: [[1, 1, 1], [1, 0, 1], [1, 0, 0], [1, 1, 0]] }, 
 ];
 
-const BLOCK_TEXTURES = {
+const BLOCK_TEXTURES: Record<number, any> = {
   1: { top: 0, side: 8, bottom: 16 }, // Grass
   2: { top: 16, side: 16, bottom: 16 }, // Dirt
   3: { top: 24, side: 24, bottom: 24 }, // Stone
@@ -58,9 +58,12 @@ class SimplexNoise {
     const x2 = x0 - 1.0 + 2.0 * G2, y2 = y0 - 1.0 + 2.0 * G2;
     const ii = i & 255, jj = j & 255;
     const g0 = this.grad3[this.perm[ii + this.perm[jj]] % 12];
+    const g1 = this.grad3[this.perm[ii + i1 + this.perm[jj + j1]] % 12];
+    const g2 = this.grad3[this.perm[ii + 1 + this.perm[jj + 1]] % 12];
     const n0 = Math.max(0, 0.5 - x0*x0 - y0*y0)**4 * (g0[0]*x0 + g0[1]*y0);
-    // simplified for brevity...
-    return 70.0 * n0; 
+    const n1 = Math.max(0, 0.5 - x1*x1 - y1*y1)**4 * (g1[0]*x1 + g1[1]*y1);
+    const n2 = Math.max(0, 0.5 - x2*x2 - y2*y2)**4 * (g2[0]*x2 + g2[1]*y2);
+    return 70.0 * (n0 + n1 + n2);
   }
 }
 
@@ -88,28 +91,27 @@ self.onmessage = (e: MessageEvent) => {
       }
     }
 
-    // 2. Meshing (Face Culling)
-    const pos: number[] = [], uv: number[] = [], norm: number[] = [], ind: number[] = [];
+    // 2. Meshing
+    const pos: number[] = [], uv: number[] = [], norm: number[] = [], ind: number[] = [], colArr: number[] = [];
     let count = 0;
 
-    const isTransparent = (b: number) => b === 0 || b === 6;
+    const getBlock = (lx: number, ly: number, lz: number) => {
+      if (lx < 0 || lx >= CHUNK_SIZE || ly < 0 || ly >= CHUNK_HEIGHT || lz < 0 || lz >= CHUNK_SIZE) return 0;
+      return chunk[lx + ly * CHUNK_SIZE + lz * CHUNK_SIZE * CHUNK_HEIGHT];
+    };
 
     for (let y = 0; y < CHUNK_HEIGHT; y++) {
       for (let z = 0; z < CHUNK_SIZE; z++) {
         for (let x = 0; x < CHUNK_SIZE; x++) {
-          const block = chunk[x + y * CHUNK_SIZE + z * CHUNK_SIZE * CHUNK_HEIGHT];
+          const block = getBlock(x, y, z);
           if (block === 0) continue;
 
           for (const face of FACE_CONFIG) {
             const nx = x + face.dir[0], ny = y + face.dir[1], nz = z + face.dir[2];
-            let neighbor = 0;
-            if (nx >= 0 && nx < CHUNK_SIZE && ny >= 0 && ny < CHUNK_HEIGHT && nz >= 0 && nz < CHUNK_SIZE) {
-              neighbor = chunk[nx + ny * CHUNK_SIZE + nz * CHUNK_SIZE * CHUNK_HEIGHT];
-            }
+            const neighbor = getBlock(nx, ny, nz);
+            if (neighbor !== 0 && neighbor !== 6) continue;
 
-            if (!isTransparent(neighbor) && neighbor !== 0) continue;
-
-            const textures = (BLOCK_TEXTURES as any)[block] || BLOCK_TEXTURES[1];
+            const textures = BLOCK_TEXTURES[block] || BLOCK_TEXTURES[1];
             const texIdx = textures[face.name] || textures.side;
             const tx = texIdx % ATLAS_COLS, ty = Math.floor(texIdx / ATLAS_COLS);
             const u0 = (tx * FULL_TILE + PADDING) / ATLAS_SIZE;
@@ -122,6 +124,7 @@ self.onmessage = (e: MessageEvent) => {
               pos.push(cx * CHUNK_SIZE + x + face.corners[i][0], y + face.corners[i][1], cz * CHUNK_SIZE + z + face.corners[i][2]);
               norm.push(...face.dir);
               uv.push(...uvMap[i]);
+              colArr.push(1, 1, 1);
             }
             ind.push(count, count + 1, count + 2, count, count + 2, count + 3);
             count += 4;
@@ -134,10 +137,11 @@ self.onmessage = (e: MessageEvent) => {
       positions: new Float32Array(pos),
       uvs: new Float32Array(uv),
       normals: new Float32Array(norm),
+      colors: new Float32Array(colArr),
       indices: new Uint32Array(ind)
     };
 
-    const transfers = [chunk.buffer, meshData.positions.buffer, meshData.uvs.buffer, meshData.normals.buffer, meshData.indices.buffer];
+    const transfers = [chunk.buffer, meshData.positions.buffer, meshData.uvs.buffer, meshData.normals.buffer, meshData.colors.buffer, meshData.indices.buffer];
     (self as any).postMessage({ type: 'generated', cx, cz, chunk, meshData }, transfers);
   }
 };
