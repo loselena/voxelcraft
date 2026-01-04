@@ -50,11 +50,10 @@ const StarShader = {
 };
 
 const Stars: React.FC<StarsProps> = ({ intensity }) => {
-  const count = 5000;
   const pointsRef = useRef<THREE.Points>(null);
-  const materialRef = useRef<THREE.ShaderMaterial>(null);
 
-  const geometry = useMemo(() => {
+  const starsObject = useMemo(() => {
+    const count = 5000;
     const geo = new THREE.BufferGeometry();
     const pos = new Float32Array(count * 3);
     const col = new Float32Array(count * 3);
@@ -72,7 +71,6 @@ const Stars: React.FC<StarsProps> = ({ intensity }) => {
       const r = 950;
       const theta = Math.random() * Math.PI * 2;
       const phi = Math.acos(2 * Math.random() - 1);
-
       pos[i * 3] = r * Math.sin(phi) * Math.cos(theta);
       pos[i * 3 + 1] = r * Math.cos(phi);
       pos[i * 3 + 2] = r * Math.sin(phi) * Math.sin(theta);
@@ -98,33 +96,29 @@ const Stars: React.FC<StarsProps> = ({ intensity }) => {
     geo.setAttribute('size', new THREE.BufferAttribute(sz, 1));
     geo.setAttribute('phase', new THREE.BufferAttribute(ph, 1));
     geo.setAttribute('magnitude', new THREE.BufferAttribute(mag, 1));
-    
-    return geo;
+
+    const mat = new THREE.ShaderMaterial({
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      vertexShader: StarShader.vertexShader,
+      fragmentShader: StarShader.fragmentShader,
+      uniforms: THREE.UniformsUtils.clone(StarShader.uniforms)
+    });
+
+    return new THREE.Points(geo, mat);
   }, []);
 
   useFrame((state) => {
-    if (materialRef.current) {
-      materialRef.current.uniforms.uTime.value = state.clock.elapsedTime;
-      materialRef.current.uniforms.uOpacity.value = intensity;
+    const mat = starsObject.material as THREE.ShaderMaterial;
+    if (mat.uniforms) {
+      mat.uniforms.uTime.value = state.clock.elapsedTime;
+      mat.uniforms.uOpacity.value = intensity;
     }
-    if (pointsRef.current) {
-      pointsRef.current.rotation.y = state.clock.elapsedTime * 0.0005;
-    }
+    starsObject.rotation.y = state.clock.elapsedTime * 0.0005;
   });
 
-  return (
-    <primitive object={new THREE.Points(geometry)}>
-      <shaderMaterial
-        ref={materialRef}
-        transparent
-        depthWrite={false}
-        blending={THREE.AdditiveBlending}
-        vertexShader={StarShader.vertexShader}
-        fragmentShader={StarShader.fragmentShader}
-        uniforms={StarShader.uniforms}
-      />
-    </primitive>
-  );
+  return <primitive ref={pointsRef} object={starsObject} />;
 };
 
 export default Stars;
