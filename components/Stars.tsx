@@ -61,7 +61,8 @@ const Stars: React.FC<StarsProps> = ({ intensity }) => {
   const pointsRef = useRef<THREE.Points>(null);
   const materialRef = useRef<THREE.ShaderMaterial>(null);
 
-  const [positions, colors, sizes, phases, magnitudes] = useMemo(() => {
+  const geometry = useMemo(() => {
+    const geo = new THREE.BufferGeometry();
     const pos = new Float32Array(count * 3);
     const col = new Float32Array(count * 3);
     const sz = new Float32Array(count);
@@ -92,12 +93,7 @@ const Stars: React.FC<StarsProps> = ({ intensity }) => {
       pos[i * 3 + 2] = r * Math.sin(phi) * Math.sin(theta);
 
       const cRand = Math.random();
-      let color;
-      if (cRand < 0.1) color = starColors[0];
-      else if (cRand < 0.7) color = starColors[1];
-      else if (cRand < 0.95) color = starColors[2];
-      else color = starColors[3];
-
+      let color = starColors[Math.floor(Math.random() * starColors.length)];
       col[i * 3] = color.r;
       col[i * 3 + 1] = color.g;
       col[i * 3 + 2] = color.b;
@@ -107,7 +103,14 @@ const Stars: React.FC<StarsProps> = ({ intensity }) => {
       sz[i] = 0.8 + magnitude * 1.5;
       ph[i] = Math.random() * 100;
     }
-    return [pos, col, sz, ph, mag];
+
+    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+    geo.setAttribute('size', new THREE.BufferAttribute(sz, 1));
+    geo.setAttribute('phase', new THREE.BufferAttribute(ph, 1));
+    geo.setAttribute('magnitude', new THREE.BufferAttribute(mag, 1));
+    
+    return geo;
   }, []);
 
   useFrame((state) => {
@@ -121,29 +124,7 @@ const Stars: React.FC<StarsProps> = ({ intensity }) => {
   });
 
   return (
-    <points ref={pointsRef}>
-      <bufferGeometry>
-        <bufferAttribute
-          attach="attributes-position"
-          args={[positions, 3]}
-        />
-        <bufferAttribute
-          attach="attributes-color"
-          args={[colors, 3]}
-        />
-        <bufferAttribute
-          attach="attributes-size"
-          args={[sizes, 1]}
-        />
-        <bufferAttribute
-          attach="attributes-phase"
-          args={[phases, 1]}
-        />
-        <bufferAttribute
-          attach="attributes-magnitude"
-          args={[magnitudes, 1]}
-        />
-      </bufferGeometry>
+    <points ref={pointsRef} geometry={geometry}>
       <shaderMaterial
         ref={materialRef}
         transparent
