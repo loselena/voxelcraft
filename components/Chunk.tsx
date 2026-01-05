@@ -45,7 +45,7 @@ const PlacedTorch: React.FC<{ torch: TorchData }> = ({ torch }) => {
         for (let y = 0; y < 8; y++) {
           voxels.push({
             id: `${x}-${y}-${z}`,
-            pos: [x * size, y * size + 0.35, z * size],
+            pos: new THREE.Vector3(x * size, y * size + 0.35, z * size),
             layer: y
           });
         }
@@ -65,7 +65,7 @@ const PlacedTorch: React.FC<{ torch: TorchData }> = ({ torch }) => {
         children.forEach((child: any, idx) => {
           const v = fireVoxels[idx];
           if (!v) return;
-          const distFromCenter = Math.sqrt(v.pos[0]**2 + v.pos[2]**2);
+          const distFromCenter = Math.sqrt(v.pos.x**2 + v.pos.z**2);
           let prob = 0.3;
           if (v.layer < 2) prob = 0.85 - distFromCenter * 4;
           else if (v.layer < 4) prob = 0.65 - distFromCenter * 4;
@@ -80,8 +80,11 @@ const PlacedTorch: React.FC<{ torch: TorchData }> = ({ torch }) => {
             else if (v.layer < 6) colorStr = colors.hot;
             else colorStr = colors.peak;
             child.material.color.set(colorStr);
-            child.position.x = v.pos[0] + tiltX * (v.layer * 0.6);
-            child.position.z = v.pos[2] + tiltZ * (v.layer * 0.6);
+            child.position.set(
+              v.pos.x + tiltX * (v.layer * 0.6),
+              v.pos.y,
+              v.pos.z + tiltZ * (v.layer * 0.6)
+            );
           }
         });
       }
@@ -95,11 +98,11 @@ const PlacedTorch: React.FC<{ torch: TorchData }> = ({ torch }) => {
 
   return (
     <group position={torch.position} rotation={torch.rotation}>
-      <group position={[0, 0.1, 0]}>
-        <mesh position={[0, 0, 0]} material={texMgr.torchWoodMaterial}>
+      <group position={new THREE.Vector3(0, 0.1, 0)}>
+        <mesh position={new THREE.Vector3(0, 0, 0)} material={texMgr.torchWoodMaterial}>
           <boxGeometry args={[0.12, 0.4, 0.12]} />
         </mesh>
-        <mesh position={[0, 0.2, 0]} material={texMgr.torchBaseMaterial}>
+        <mesh position={new THREE.Vector3(0, 0.2, 0)} material={texMgr.torchBaseMaterial}>
           <boxGeometry args={[0.14, 0.08, 0.14]} />
         </mesh>
       </group>
@@ -111,7 +114,7 @@ const PlacedTorch: React.FC<{ torch: TorchData }> = ({ torch }) => {
           </mesh>
         ))}
       </group>
-      <pointLight ref={lightRef} position={[0, 0.5, 0]} color="#ff9d00" distance={12} intensity={1.2} decay={2} />
+      <pointLight ref={lightRef} position={new THREE.Vector3(0, 0.5, 0)} color="#ff9d00" distance={12} intensity={1.2} decay={2} />
     </group>
   );
 };
