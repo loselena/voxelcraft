@@ -86,10 +86,8 @@ const HandTool = ({
   return (
     <Hud>
       <PerspectiveCamera makeDefault fov={50} position={[0, 0, 0]} />
-      
       <ambientLight intensity={0.9} />
-      <pointLight ref={lightRef} position={[1, 1, 0]} distance={10} intensity={0.8} color="#ffffff" />
-      
+      <pointLight ref={lightRef} position={[1, 1, 0]} distance={10} intensity={0.8} />
       <group ref={pivotRef}>
         {!isHoldingAnything ? (
           <group ref={armGroupRef}>
@@ -120,7 +118,7 @@ const ToolModel = ({ type, customPixels, isArm }: { type: ToolType | BlockType, 
         for (let y = 0; y < 8; y++) {
           voxels.push({
             id: `${x}-${y}-${z}`,
-            pos: [x * size, y * size + 0.35, z * size],
+            pos: [x * size, y * size + 0.35, z * size] as [number, number, number],
             layer: y
           });
         }
@@ -141,17 +139,14 @@ const ToolModel = ({ type, customPixels, isArm }: { type: ToolType | BlockType, 
     const time = state.clock.elapsedTime;
     if (type === BlockType.TORCH && fireRef.current && time - lastUpdate.current > 0.08) {
       lastUpdate.current = time;
-      
       const tiltX = Math.sin(time * 2.5) * 0.04;
       const tiltZ = Math.cos(time * 3.2) * 0.04;
 
       fireRef.current.children.forEach((child, idx) => {
         const v = fireVoxels[idx];
         if (!v) return;
-        
         const distFromCenter = Math.sqrt(v.pos[0]**2 + v.pos[2]**2);
         let prob = 0.3;
-        
         if (v.layer < 2) prob = 0.85 - distFromCenter * 4;
         else if (v.layer < 4) prob = 0.65 - distFromCenter * 4;
         else if (v.layer < 6) prob = 0.4 - distFromCenter * 2;
@@ -171,7 +166,6 @@ const ToolModel = ({ type, customPixels, isArm }: { type: ToolType | BlockType, 
           if (mat instanceof THREE.MeshBasicMaterial) {
             mat.color.set(colorStr);
           }
-          
           child.position.x = v.pos[0] + tiltX * (v.layer * 0.6);
           child.position.z = v.pos[2] + tiltZ * (v.layer * 0.6);
         }
@@ -187,29 +181,19 @@ const ToolModel = ({ type, customPixels, isArm }: { type: ToolType | BlockType, 
 
   const blockGeometry = useMemo(() => {
     if (typeof type !== 'number' || type === BlockType.AIR || type === BlockType.TORCH) return null;
-
     const geo = new THREE.BoxGeometry(0.5, 0.5, 0.5);
     const uvAttr = geo.attributes.uv;
-    
     const textures = BLOCK_TEXTURES[type] || { top: 0, side: 0, bottom: 0 };
-    const faceMap = [
-      textures.side, textures.side,
-      textures.top, textures.bottom,
-      textures.side, textures.side
-    ];
-
+    const faceMap = [textures.side, textures.side, textures.top, textures.bottom, textures.side, textures.side];
     const pixelOffset = 0.1 / ATLAS_SIZE;
-
     for (let faceIdx = 0; faceIdx < 6; faceIdx++) {
       const texIndex = faceMap[faceIdx];
       const col = texIndex % ATLAS_COLS;
       const row = Math.floor(texIndex / ATLAS_COLS);
-      
       const u0 = (col * FULL_TILE + PADDING) / ATLAS_SIZE + pixelOffset;
       const u1 = (col * FULL_TILE + PADDING + TILE_SIZE) / ATLAS_SIZE - pixelOffset;
       const v0 = 1 - (row * FULL_TILE + PADDING + TILE_SIZE) / ATLAS_SIZE + pixelOffset;
       const v1 = 1 - (row * FULL_TILE + PADDING) / ATLAS_SIZE - pixelOffset;
-
       const startIdx = faceIdx * 4;
       uvAttr.setXY(startIdx, u0, v1);
       uvAttr.setXY(startIdx + 1, u1, v1);
@@ -232,7 +216,6 @@ const ToolModel = ({ type, customPixels, isArm }: { type: ToolType | BlockType, 
 
   if (type === BlockType.TORCH) {
     const torchVisualScale = 30;
-
     return (
       <group scale={[s * torchVisualScale, s * torchVisualScale, s * torchVisualScale]}>
         <group position={[0, 0.1, 0]}>
@@ -277,4 +260,5 @@ const ToolModel = ({ type, customPixels, isArm }: { type: ToolType | BlockType, 
   return null;
 };
 
+// Fixed: exported HandTool as default to properly receive props in Player.tsx
 export default HandTool;
