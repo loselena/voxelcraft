@@ -42,7 +42,7 @@ const DropItem: React.FC<{ drop: DropEntity, texture: THREE.Texture }> = ({ drop
         for (let y = 0; y < 8; y++) {
           voxels.push({
             id: `${x}-${y}-${z}`,
-            pos: [x * size, y * size + 0.35, z * size],
+            pos: [x * size, y * size + 0.35, z * size] as [number, number, number],
             layer: y
           });
         }
