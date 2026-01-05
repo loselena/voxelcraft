@@ -100,8 +100,11 @@ const DropItem: React.FC<{ drop: DropEntity, texture: THREE.Texture }> = ({ drop
             mat.color.set(colorStr);
           }
           
-          child.position.x = v.pos.x + tiltX * (v.layer * 0.6);
-          child.position.z = v.pos.z + tiltZ * (v.layer * 0.6);
+          child.position.set(
+            v.pos.x + tiltX * (v.layer * 0.6),
+            v.pos.y,
+            v.pos.z + tiltZ * (v.layer * 0.6)
+          );
         }
       });
     }
@@ -146,7 +149,7 @@ const DropItem: React.FC<{ drop: DropEntity, texture: THREE.Texture }> = ({ drop
     const vSize = 0.06;
     return (
       <group ref={groupRef}>
-        <group scale={[s, s, s]} position={new THREE.Vector3(0, -0.1, 0)}>
+        <group scale={s} position={new THREE.Vector3(0, -0.1, 0)}>
           <group position={new THREE.Vector3(0, 0.1, 0)}>
             <mesh position={new THREE.Vector3(0, 0, 0)} material={texMgr.torchWoodMaterial}>
               <boxGeometry args={[0.12, 0.4, 0.12]} />
